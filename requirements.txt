@@ -1,0 +1,4 @@
+PySide6>=6.5,<7
+numpy>=1.23,<3
+# 系统没有 ffmpeg 时，用它自带的 ffmpeg 生成波形；已装 ffmpeg 可删掉这一行
+imageio-ffmpeg>=0.4.9
