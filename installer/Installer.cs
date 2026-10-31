@@ -84,7 +84,7 @@ namespace LyricsSubtitleSetup
 
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new InstallerForm());
+            Application.Run(new InstallerForm(ArgValue(args, "--dir")));
             return 0;
         }
 
@@ -433,7 +433,7 @@ namespace LyricsSubtitleSetup
         private readonly BackgroundWorker worker;
         private string installedTarget;
 
-        internal InstallerForm()
+        internal InstallerForm(string initialPath)
         {
             Text = Program.AppName + " 安装程序";
             ClientSize = new Size(820, 660);
@@ -470,7 +470,7 @@ namespace LyricsSubtitleSetup
             Controls.Add(pathGroup);
 
             pathBox = new TextBox();
-            pathBox.Text = Program.DefaultDir;
+            pathBox.Text = String.IsNullOrEmpty(initialPath) ? Program.DefaultDir : initialPath;
             pathBox.Location = new Point(12, 24);
             pathBox.Width = 650;
             pathGroup.Controls.Add(pathBox);
