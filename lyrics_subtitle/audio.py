@@ -38,10 +38,20 @@ class WaveformData:
 
 
 def find_ffmpeg() -> Optional[str]:
-    """按优先级查找 ffmpeg：环境变量 → PATH → imageio-ffmpeg → 程序目录。"""
+    """按优先级查找 ffmpeg：环境变量 → 程序自带 → PATH → imageio-ffmpeg。"""
     env = os.environ.get("LYRICSUB_FFMPEG")
     if env and Path(env).is_file():
         return str(Path(env))
+
+    suffix = ".exe" if os.name == "nt" else ""
+    bundled = [
+        Path(__file__).resolve().parents[1] / "bin" / f"ffmpeg{suffix}",
+        Path(sys.executable).resolve().parent / "bin" / f"ffmpeg{suffix}",
+        Path(sys.executable).resolve().parent / f"ffmpeg{suffix}",
+    ]
+    for candidate in bundled:
+        if candidate.is_file():
+            return str(candidate)
 
     found = shutil.which("ffmpeg")
     if found:
@@ -55,15 +65,6 @@ def find_ffmpeg() -> Optional[str]:
             return exe
     except Exception:
         pass
-
-    suffix = ".exe" if os.name == "nt" else ""
-    candidates = [
-        Path(__file__).resolve().parents[1] / "bin" / f"ffmpeg{suffix}",
-        Path(sys.executable).resolve().parent / f"ffmpeg{suffix}",
-    ]
-    for candidate in candidates:
-        if candidate.is_file():
-            return str(candidate)
     return None
 
 

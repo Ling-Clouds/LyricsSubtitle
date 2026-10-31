@@ -4,6 +4,25 @@
 
 - 仓库：<https://github.com/Ling-Clouds/LyricsSubtitle>
 - 版本：0.1.0
+- 许可证：MIT（第三方组件声明见下文）
+
+## 安装（推荐）
+
+最推荐直接使用安装程序，不需要安装 Python，也不需要下载源码。适用于
+**Windows 10/11 64 位**。
+
+1. 打开 [Releases](https://github.com/Ling-Clouds/LyricsSubtitle/releases/latest)，下载
+   **`LyricsSubtitle-Installer.exe`**。
+2. 双击运行安装程序，选择安装位置（默认
+   `%LOCALAPPDATA%\Programs\LyricsSubtitle`），阅读并同意许可证与第三方组件声明。
+3. 安装完成后从桌面快捷方式或开始菜单启动「歌词打轴」。
+4. 卸载：Windows 设置 → 应用 → 歌词打轴；或开始菜单中的「卸载 歌词打轴」。
+
+安装程序按用户安装，不需要管理员权限。安装包已经包含运行所需的
+Qt/PySide6、Python 运行时和 FFmpeg，不会修改系统环境变量。
+
+> 安装程序尚未做代码签名，Windows SmartScreen 可能提示“未知发布者”。
+> 确认文件来自本仓库 Releases 后，可选择“更多信息 → 仍要运行”。
 
 ![主界面](preview.png)
 
@@ -29,48 +48,7 @@
 
 ![空状态](preview_empty.png)
 
-## 环境要求
-
-- Windows 10/11 64 位（其他桌面平台未测试）
-- Python 3.10 及以上
-- PySide6、numpy
-- ffmpeg：用于解码音频并生成波形。没有系统 ffmpeg 时，程序会自动使用
-  `imageio-ffmpeg` 提供的 ffmpeg。
-
-安装依赖：
-
-```bat
-python -m pip install -r requirements.txt
-```
-
-## 运行
-
-```bat
-python app.py
-```
-
-带示例音频和歌词启动：
-
-```bat
-python app.py --demo
-```
-
-也可以直接双击 `run.bat`。
-
-### Windows 可执行文件
-
-按下文「打包 Windows exe」构建后，产物位于：
-
-```text
-dist\LyricsSubtitle\LyricsSubtitle.exe
-```
-
-这是 PyInstaller 的 **onedir** 形式，必须保留整个 `dist\LyricsSubtitle` 文件夹，
-不能只复制 exe。构建产物、`bin\ffmpeg.exe` 和虚拟环境不提交到 Git 仓库。
-
-从源码重新构建见下文「打包 Windows exe」。
-
-## 使用流程
+## 使用方法
 
 1. **打开音频**：没有音频时，单击波形轨中央的加号，或把 mp3/wav/flac/m4a 等
    音频文件直接拖到波形轨上。也可以用工具栏「打开音频」。
@@ -111,6 +89,31 @@ dist\LyricsSubtitle\LyricsSubtitle.exe
 - 细分线：1px，最暗
 
 缩放较小时细分线会自动省略，只保留拍线和小节线。
+
+## 从源码运行
+
+适合开发或自行修改。普通用户建议直接使用上面的安装程序。
+
+环境要求：
+
+- Windows 10/11 64 位
+- Python 3.10 及以上
+- PySide6、numpy
+- FFmpeg：源码运行时如果没有系统 ffmpeg，也可以安装 `imageio-ffmpeg`；
+  安装包版本已内置 FFmpeg。
+
+```bat
+python -m pip install -r requirements.txt
+python app.py
+```
+
+带示例音频和歌词启动：
+
+```bat
+python app.py --demo
+```
+
+也可以直接双击 `run.bat`。
 
 ## 导出格式
 
@@ -176,7 +179,7 @@ dist\LyricsSubtitle\LyricsSubtitle.exe
 
 ## 工程文件
 
-工程保存为 `.lysp` 文件（内容仍是 JSON），包含：
+工程保存为 `.lysp` 文件，包含：
 
 - 音频绝对路径
 - 音频时长
@@ -186,11 +189,100 @@ dist\LyricsSubtitle\LyricsSubtitle.exe
 打开工程时如果音频被移动，会提示重新定位。旧版 `.json` 工程仍然可以通过
 打开对话框选择并打开。
 
+## 开发与打包
+
+目录结构：
+
+```text
+app.py                      入口
+lyrics_subtitle/
+  core.py                   数据模型、网格计算、时间格式
+  exporters.py              LRC / SRT 生成
+  audio.py                  ffmpeg 解码与波形峰值
+  history.py                撤销栈
+  demo.py                   示例工程
+  ui/
+    main_window.py          主窗口与业务串联
+    timeline.py             时间轴绘制与鼠标交互
+    panel.py                歌词列表
+    player.py               QtMultimedia 播放封装
+    theme.py                深色主题
+installer/
+  Installer.cs             原生 C# 安装程序界面与安装逻辑
+  Uninstaller.cs           原生 C# 卸载程序
+  make_payload.py          生成安装负载
+assets/
+  icon.ico / icon.png       应用图标
+tests/                      单元测试与离屏 UI 冒烟测试
+tools/                      截图、播放冒烟等开发脚本
+LyricsSubtitle.spec         应用 PyInstaller 打包配置
+build_exe.bat               只构建应用
+build_installer.bat         构建应用 + 卸载程序 + 安装程序
+requirements.txt            运行依赖
+requirements-build.txt      打包依赖
+```
+
+运行测试：
+
+```bat
+python -m unittest discover -s tests -v
+```
+
+### 构建应用和安装程序
+
+应用使用 PyInstaller 打包；安装器和卸载器使用 Windows 自带的
+.NET Framework 4.8 C# 编译器（`csc.exe`）编译，不需要额外安装 Inno Setup、
+NSIS 等工具。应用和 FFmpeg 均为 64 位。
+
+1. 准备 **LGPL 版 FFmpeg shared build**（推荐
+   [BtbN FFmpeg-Builds](https://github.com/BtbN/FFmpeg-Builds) 的
+   `win64-lgpl-shared` 包），把 `ffmpeg.exe` 和全部 `.dll` 放到 `bin/`。
+   不要使用带 `--enable-gpl` 的构建，以免与项目的 MIT 许可证产生冲突。
+2. 安装打包依赖：
+
+   ```bat
+   python -m pip install -r requirements-build.txt
+   ```
+
+3. 只构建应用：
+
+   ```bat
+   build_exe.bat
+   ```
+
+   产物：`dist\LyricsSubtitle\LyricsSubtitle.exe`（onedir，必须保留整个文件夹）。
+
+4. 构建完整安装程序：
+
+   ```bat
+   build_installer.bat
+   ```
+
+   产物：`dist\LyricsSubtitle-Installer.exe`。
+
+说明：
+
+- 安装程序会把 `dist\LyricsSubtitle` 打包成单文件安装器，安装到用户目录，
+  不需要管理员权限。
+- `dist/`、`build/`、`bin/`、`.venv-build/`、`.pyinstaller-cache/` 都不会进入
+  Git 仓库。
+- 应用自检：
+
+  ```bat
+  dist\LyricsSubtitle\LyricsSubtitle.exe --self-test
+  ```
+
+  正常时返回码为 0，并在 `%TEMP%\lyrics_subtitle_selftest.txt` 写入结果。
+
 ## 常见问题
+
+**SmartScreen 提示未知发布者**
+
+安装程序未做代码签名。确认来自本仓库 Releases 后，选择“更多信息 → 仍要运行”。
 
 **没有波形 / 提示找不到 ffmpeg**
 
-安装 ffmpeg 并加入 `PATH`，或者执行：
+安装包版本自带 FFmpeg；如果使用源码运行，请安装 ffmpeg 并加入 `PATH`，或者：
 
 ```bat
 python -m pip install imageio-ffmpeg
@@ -221,110 +313,20 @@ python -m pip install imageio-ffmpeg
 本工具输出 UTF-8 无 BOM。少数老软件只认 GBK 或带 BOM 的 UTF-8，
 可以先用记事本另存为对应编码再导入。
 
-## 打包 Windows exe
+**如何卸载**
 
-打包使用 PyInstaller 的 onedir 模式，并把 ffmpeg 一起放入产物：
-
-1. 确认 `bin\ffmpeg.exe` 存在。若没有，把任意可用的 `ffmpeg.exe` 放到该路径；
-   `build_exe.bat` 也会尝试从系统 `PATH` 自动复制一份。
-2. 安装 PyInstaller（只需打包时安装）：
-
-   ```bat
-   python -m pip install -r requirements-build.txt
-   ```
-
-3. 执行构建：
-
-   ```bat
-   build_exe.bat
-   ```
-
-   等价于：
-
-   ```bat
-   python -m PyInstaller --noconfirm --clean LyricsSubtitle.spec
-   ```
-
-4. 产物：
-
-   ```text
-   dist\LyricsSubtitle\LyricsSubtitle.exe
-   ```
-
-5. 可选自检（会加载示例音频、生成 LRC/SRT 后立即退出）：
-
-   ```bat
-   dist\LyricsSubtitle\LyricsSubtitle.exe --self-test
-   ```
-
-   结果同时写到 `%TEMP%\lyrics_subtitle_selftest.txt`，正常时第一行为 `ok`。
-
-说明：
-
-- `LyricsSubtitle.spec` 会把 `bin\ffmpeg.exe` 放到产物的 `bin` 目录，
-  程序启动时会优先使用它，因此目标机器不需要另外安装 ffmpeg。
-- 这是 onedir 产物，需要整个文件夹一起分发；压缩时请压缩
-  `dist\LyricsSubtitle` 目录。
-- `dist/`、`build/`、`bin/` 和 `.venv-build/` 都已加入 `.gitignore`，
-  不会进入代码仓库。
-- 打包时使用的 ffmpeg 遵循其自身许可证；仓库本身没有提交 ffmpeg 二进制。
-
-## 开发与测试
-
-目录结构：
-
-```text
-app.py                      入口
-lyrics_subtitle/
-  core.py                   数据模型、网格计算、时间格式
-  exporters.py              LRC / SRT 生成
-  audio.py                  ffmpeg 解码与波形峰值
-  history.py                撤销栈
-  demo.py                   示例工程
-  ui/
-    main_window.py          主窗口与业务串联
-    timeline.py             时间轴绘制与鼠标交互
-    panel.py                歌词列表
-    player.py               QtMultimedia 播放封装
-    theme.py                深色主题
-assets/
-  icon.ico / icon.png       应用图标
-tests/                      单元测试与离屏 UI 冒烟测试
-tools/                      截图、播放冒烟等开发脚本
-LyricsSubtitle.spec         PyInstaller 打包配置
-build_exe.bat               Windows 一键打包脚本
-requirements.txt            运行依赖
-requirements-build.txt      打包依赖
-```
-
-运行测试：
-
-```bat
-python -m unittest discover -s tests -v
-```
-
-离线渲染截图：
-
-```bat
-python tools/screenshot.py
-```
-
-> 截图脚本在离屏模式下需要 Windows 字体目录；脚本里已设置
-> `QT_QPA_FONTDIR=C:\Windows\Fonts`。
+Windows 设置 → 应用 → 歌词打轴；或开始菜单中的「卸载 歌词打轴」。
 
 ## 许可证
 
-当前仓库尚未指定开源许可证。若计划公开发布或允许他人复用，请先补充合适的
-许可证文件；打包产物中附带的 ffmpeg 遵循其自身许可证。
+- 本项目源代码使用 **MIT License**，见 [LICENSE](LICENSE)。
+- 安装包附带第三方组件，完整声明见
+  [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)，许可证文本在
+  [licenses/](licenses/) 目录。
+- FFmpeg：LGPL-3.0（shared build，未启用 `--enable-gpl`），
+  对应源码与构建脚本见第三方声明。
+- Qt 6 / PySide6：LGPL-3.0，以动态库形式分发，用户可替换安装目录中的共享库。
+- NumPy：BSD-3-Clause；Python：PSF-2.0。
 
-## 当前范围与后续可做
-
-当前版本是单 BPM、行级打轴：
-
-- 不做变速歌曲的 tempo map
-- 不做逐字 / 逐词时间
-- 不做视频画面参考
-- 不做自动 BPM 检测
-- LRC 只输出标准行级格式
-
-后续可以按需要增加逐字 YRC、视频预览、节拍器、自动保存、exe 打包等。
+如果你重新分发本软件或其修改版本，请保留 `LICENSE`、`THIRD_PARTY_NOTICES.md`
+和 `licenses/` 目录，并遵守 FFmpeg、Qt/PySide6 等组件的许可证。

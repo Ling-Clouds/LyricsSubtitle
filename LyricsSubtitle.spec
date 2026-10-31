@@ -1,10 +1,23 @@
 # -*- mode: python ; coding: utf-8 -*-
 
+from pathlib import Path
+
+bin_files = [
+    (str(path), 'bin')
+    for path in sorted(Path('bin').glob('*'))
+    if path.suffix.lower() in {'.exe', '.dll'}
+]
+
 a = Analysis(
     ['app.py'],
     pathex=[],
-    binaries=[('bin/ffmpeg.exe', 'bin')],
-    datas=[('README.md', '.')],
+    binaries=bin_files,
+    datas=[
+        ('README.md', '.'),
+        ('LICENSE', '.'),
+        ('THIRD_PARTY_NOTICES.md', '.'),
+        ('licenses', 'licenses'),
+    ],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

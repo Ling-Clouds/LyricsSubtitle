@@ -5,7 +5,9 @@ import os
 import subprocess
 from pathlib import Path
 
-exe = Path("dist/LyricsSubtitle/LyricsSubtitle.exe").resolve()
+exe = Path(
+    os.environ.get("LYRICSUB_EXE", "dist/LyricsSubtitle/LyricsSubtitle.exe")
+).resolve()
 marker = Path(os.environ.get("TEMP", ".")) / "lyrics_subtitle_selftest.txt"
 marker.unlink(missing_ok=True)
 
@@ -15,7 +17,7 @@ env["PATH"] = r"C:\Windows\System32;C:\Windows"
 try:
     proc = subprocess.run(
         [str(exe), "--self-test"],
-        cwd=str(Path.cwd()),
+        cwd=str(exe.parent),
         env=env,
         capture_output=True,
         timeout=20,

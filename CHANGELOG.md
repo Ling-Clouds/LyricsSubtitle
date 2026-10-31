@@ -23,7 +23,10 @@
 - 已打轴字幕块通过拖动块间边界调整时间，鼠标显示左右双箭头
 - 最后一句使用实心块 + 半透明尾巴表示，点击可继续打轴
 
-### 构建
+### 构建与分发
 
-- PyInstaller onedir 打包，内置 ffmpeg
+- PyInstaller onedir 打包应用，内置 FFmpeg
+- 单文件安装程序：按用户安装、快捷方式、卸载程序、无需管理员权限
 - 应用图标、Windows 无控制台窗口
+- 代码采用 MIT 许可证；附带 FFmpeg（LGPL-3.0）、Qt/PySide6（LGPL-3.0）、
+  NumPy（BSD-3-Clause）和 Python（PSF-2.0）的第三方声明与许可证文本

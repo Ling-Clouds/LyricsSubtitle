@@ -2,44 +2,33 @@
 chcp 65001 >nul
 setlocal
 cd /d "%~dp0"
+set "PYINSTALLER_CONFIG_DIR=%CD%\.pyinstaller-cache"
 
 if not exist "bin\ffmpeg.exe" (
-    where ffmpeg >nul 2>&1
-    if errorlevel 1 (
-        echo [错误] 没有找到 bin\ffmpeg.exe，系统 PATH 里也没有 ffmpeg。
-        echo 请把 ffmpeg.exe 放到 bin\ffmpeg.exe 后重试。
-        pause
-        exit /b 1
-    )
-    if not exist "bin" mkdir "bin"
-    for /f "delims=" %%I in ('where ffmpeg') do (
-        echo 从 PATH 复制 ffmpeg: %%I
-        copy /y "%%I" "bin\ffmpeg.exe" >nul
-        goto :ffmpeg_ready
-    )
+    echo [閿欒] 娌℃湁鎵惧埌 bin\ffmpeg.exe銆?    echo 璇蜂娇鐢?LGPL 鐗?FFmpeg shared build锛屾妸 ffmpeg.exe 鍜岄厤濂?DLL 鏀惧埌 bin 鐩綍銆?    echo 鎺ㄨ崘鏉ユ簮锛歨ttps://github.com/BtbN/FFmpeg-Builds 鐨?win64-lgpl-shared 鍖呫€?    pause
+    exit /b 1
 )
-:ffmpeg_ready
+if not exist "bin\avcodec-*.dll" (
+    echo [閿欒] bin 鐩綍缂哄皯 ffmpeg 鐨勫叡浜?DLL銆?    echo 璇锋妸 LGPL shared build 鐨?bin 鐩綍涓叏閮?.dll 鍜?ffmpeg.exe 澶嶅埗杩囨潵銆?    pause
+    exit /b 1
+)
 
 python -m pip show pyinstaller >nul 2>&1
 if errorlevel 1 (
-    echo 正在安装 PyInstaller...
+    echo 姝ｅ湪瀹夎 PyInstaller...
     python -m pip install -r requirements-build.txt
     if errorlevel 1 (
-        echo [错误] PyInstaller 安装失败。
-        pause
+        echo [閿欒] PyInstaller 瀹夎澶辫触銆?        pause
         exit /b 1
     )
 )
 
 python -m PyInstaller --noconfirm --clean LyricsSubtitle.spec
 if errorlevel 1 (
-    echo [错误] 构建失败。
-    pause
+    echo [閿欒] 鏋勫缓澶辫触銆?    pause
     exit /b 1
 )
 
 echo.
-echo 构建完成：
-echo   dist\LyricsSubtitle\LyricsSubtitle.exe
-echo 注意：请保留整个 dist\LyricsSubtitle 文件夹，不能只复制 exe。
-pause
+echo 鏋勫缓瀹屾垚锛?echo   dist\LyricsSubtitle\LyricsSubtitle.exe
+echo 娉ㄦ剰锛氳淇濈暀鏁翠釜 dist\LyricsSubtitle 鏂囦欢澶癸紝涓嶈兘鍙鍒?exe銆?pause
