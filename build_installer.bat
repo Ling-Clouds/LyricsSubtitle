@@ -39,7 +39,7 @@ python -m PyInstaller --noconfirm --clean LyricsSubtitle.spec
 if errorlevel 1 goto :failed
 
 echo [2/5] 编译卸载程序...
-"%CSC%" /nologo /target:winexe /codepage:65001 /win32icon:"assets\icon.ico" /out:"dist\Uninstall.exe" "installer\Uninstaller.cs" /r:System.dll /r:System.Drawing.dll /r:System.Windows.Forms.dll
+"%CSC%" /nologo /target:winexe /codepage:65001 /win32icon:"assets\icon.ico" /win32manifest:"installer\Uninstaller.manifest" /out:"dist\Uninstall.exe" "installer\Uninstaller.cs" /r:System.dll /r:System.Drawing.dll /r:System.Windows.Forms.dll
 if errorlevel 1 goto :failed
 copy /y "dist\Uninstall.exe" "dist\LyricsSubtitle\Uninstall.exe" >nul
 if errorlevel 1 goto :failed
@@ -56,7 +56,7 @@ python installer\make_payload.py
 if errorlevel 1 goto :failed
 
 echo [5/5] 编译安装程序...
-"%CSC%" /nologo /target:winexe /codepage:65001 /win32icon:"assets\icon.ico" /out:"dist\LyricsSubtitle-Installer.exe" /resource:"dist\LyricsSubtitle-payload.zip",payload.zip /resource:"LICENSE",license.txt /resource:"THIRD_PARTY_NOTICES.md",notices.txt "installer\Installer.cs" /r:System.dll /r:System.Drawing.dll /r:System.Windows.Forms.dll /r:System.IO.Compression.dll /r:System.IO.Compression.FileSystem.dll
+"%CSC%" /nologo /target:winexe /codepage:65001 /win32icon:"assets\icon.ico" /win32manifest:"installer\Installer.manifest" /out:"dist\LyricsSubtitle-Installer.exe" /resource:"dist\LyricsSubtitle-payload.zip",payload.zip /resource:"LICENSE",license.txt /resource:"THIRD_PARTY_NOTICES.md",notices.txt "installer\Installer.cs" /r:System.dll /r:System.Drawing.dll /r:System.Windows.Forms.dll /r:System.IO.Compression.dll /r:System.IO.Compression.FileSystem.dll
 if errorlevel 1 goto :failed
 
 echo.
