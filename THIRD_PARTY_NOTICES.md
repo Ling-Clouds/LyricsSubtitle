@@ -9,6 +9,7 @@ LyricsSubtitle 的源代码使用 MIT 许可证，见仓库根目录 `LICENSE`�
 - 组件：`ffmpeg.exe`、`avcodec-59.dll`、`avdevice-59.dll`、
   `avfilter-8.dll`、`avformat-59.dll`、`avutil-57.dll`、
   `swresample-4.dll`、`swscale-6.dll`
+- 版权：Copyright (c) 2000-2022 the FFmpeg developers
 - 版本：`N-106957-g27cffd16aa-20220522`（FFmpeg 开发快照，2022-05-22）
 - 许可证：GNU Lesser General Public License v3.0（LGPL-3.0）
   该构建配置未启用 `--enable-gpl`，使用 `--enable-version3` 与
@@ -25,6 +26,7 @@ LyricsSubtitle 的源代码使用 MIT 许可证，见仓库根目录 `LICENSE`�
 ## Qt 6 / PySide6
 
 - 组件：Qt 6.11.0 运行库与 PySide6 6.11.0 Python 绑定
+- 版权：Copyright (C) The Qt Company Ltd.
 - 许可证：LGPL-3.0（Qt 同时提供 GPLv3 与商业许可）
 - 来源：
   - Qt 源码：<https://download.qt.io/official_releases/qt/6.11/>
@@ -39,6 +41,7 @@ LyricsSubtitle 的源代码使用 MIT 许可证，见仓库根目录 `LICENSE`�
 ## NumPy
 
 - 版本：1.26.4
+- 版权：Copyright (c) 2005-2023 NumPy Developers
 - 许可证：BSD 3-Clause
 - 来源：<https://github.com/numpy/numpy>
 - 许可证全文：`licenses/BSD-3-Clause-NumPy.txt`
@@ -46,6 +49,7 @@ LyricsSubtitle 的源代码使用 MIT 许可证，见仓库根目录 `LICENSE`�
 ## Python
 
 - 版本：Python 3.10.6
+- 版权：Copyright (c) Python Software Foundation
 - 许可证：Python Software Foundation License 2.0
 - 来源：<https://www.python.org/downloads/release/python-3106/>
 - 许可证全文：`licenses/Python-LICENSE.txt`

@@ -11,8 +11,9 @@
 最推荐直接使用安装程序，不需要安装 Python，也不需要下载源码。适用于
 **Windows 10/11 64 位**。
 
-1. 打开 [Releases](https://github.com/Ling-Clouds/LyricsSubtitle/releases/latest)，下载
-   **`LyricsSubtitle-Installer.exe`**。
+1. 直接下载
+   [LyricsSubtitle-Installer.exe](https://github.com/Ling-Clouds/LyricsSubtitle/releases/download/v0.1.0/LyricsSubtitle-Installer.exe)，
+   或打开 [Releases](https://github.com/Ling-Clouds/LyricsSubtitle/releases/latest) 选择最新安装包。
 2. 双击运行安装程序，选择安装位置（默认
    `%LOCALAPPDATA%\Programs\LyricsSubtitle`），阅读并同意许可证与第三方组件声明。
 3. 安装完成后从桌面快捷方式或开始菜单启动「歌词打轴」。
