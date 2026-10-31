@@ -15,8 +15,9 @@
    [LyricsSubtitle-Installer.exe](https://github.com/Ling-Clouds/LyricsSubtitle/releases/download/v0.1.0/LyricsSubtitle-Installer.exe)，
    或打开 [Releases](https://github.com/Ling-Clouds/LyricsSubtitle/releases/latest) 选择最新安装包。
 2. 双击运行安装程序，选择安装位置（安装程序会自动选择当前用户可写目录，
-   通常是 `%LOCALAPPDATA%\Programs\LyricsSubtitle` 或
-   `%LOCALAPPDATA%\LyricsSubtitle`），阅读并同意许可证与第三方组件声明。
+   通常是 `%LOCALAPPDATA%\Programs\LyricsSubtitle`、
+   `%LOCALAPPDATA%\LyricsSubtitle` 或 `%USERPROFILE%\LyricsSubtitle`），
+   阅读并同意许可证与第三方组件声明。
 3. 安装完成后从桌面快捷方式或开始菜单启动「歌词打轴」。
 4. 卸载：Windows 设置 → 应用 → 歌词打轴；或开始菜单中的「卸载 歌词打轴」。
 
