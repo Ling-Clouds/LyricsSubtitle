@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Security.Principal;
 using System.Windows.Forms;
 using Microsoft.Win32;
 
@@ -45,11 +46,111 @@ namespace LyricsSubtitleUninstall
                 }
             }
 
+            if (!CanWriteDirectory(directory) && !IsElevated())
+            {
+                bool elevate = silent;
+                if (!silent)
+                {
+                    DialogResult result = MessageBox.Show(
+                        "该目录需要管理员权限才能删除：\r\n" + directory +
+                        "\r\n\r\n是否以管理员身份继续卸载？",
+                        "需要管理员权限",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Warning);
+                    elevate = result == DialogResult.Yes;
+                }
+                if (elevate)
+                {
+                    if (RelaunchElevated(directory, silent))
+                    {
+                        return 0;
+                    }
+                    if (!silent)
+                    {
+                        MessageBox.Show(
+                            "没有获得管理员权限，卸载未完成。",
+                            "未获得管理员权限",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Warning);
+                    }
+                    return 5;
+                }
+                return 1;
+            }
+
             RemoveShortcuts();
             RemoveRegistry();
             RemoveApplicationFiles(directory);
             ScheduleDelete(directory);
             return 0;
+        }
+
+        private static bool CanWriteDirectory(string directory)
+        {
+            string probe = null;
+            try
+            {
+                probe = Path.Combine(directory, ".lyricsub-uninstall-" + Guid.NewGuid().ToString("N") + ".tmp");
+                using (FileStream stream = File.Create(probe, 1))
+                {
+                    stream.WriteByte(0);
+                }
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+            finally
+            {
+                if (probe != null)
+                {
+                    try
+                    {
+                        if (File.Exists(probe))
+                        {
+                            File.Delete(probe);
+                        }
+                    }
+                    catch
+                    {
+                    }
+                }
+            }
+        }
+
+        private static bool IsElevated()
+        {
+            try
+            {
+                using (WindowsIdentity identity = WindowsIdentity.GetCurrent())
+                {
+                    WindowsPrincipal principal = new WindowsPrincipal(identity);
+                    return principal.IsInRole(WindowsBuiltInRole.Administrator);
+                }
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static bool RelaunchElevated(string directory, bool silent)
+        {
+            try
+            {
+                ProcessStartInfo info = new ProcessStartInfo();
+                info.FileName = Application.ExecutablePath;
+                info.Arguments = "--dir \"" + directory + "\"" + (silent ? " --silent" : "");
+                info.UseShellExecute = true;
+                info.Verb = "runas";
+                Process.Start(info);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         private static void RemoveShortcuts()

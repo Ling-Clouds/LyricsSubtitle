@@ -14,13 +14,17 @@
 1. 直接下载
    [LyricsSubtitle-Installer.exe](https://github.com/Ling-Clouds/LyricsSubtitle/releases/download/v0.1.0/LyricsSubtitle-Installer.exe)，
    或打开 [Releases](https://github.com/Ling-Clouds/LyricsSubtitle/releases/latest) 选择最新安装包。
-2. 双击运行安装程序，选择安装位置（默认
-   `%LOCALAPPDATA%\Programs\LyricsSubtitle`），阅读并同意许可证与第三方组件声明。
+2. 双击运行安装程序，选择安装位置（安装程序会自动选择当前用户可写目录，
+   通常是 `%LOCALAPPDATA%\Programs\LyricsSubtitle` 或
+   `%LOCALAPPDATA%\LyricsSubtitle`），阅读并同意许可证与第三方组件声明。
 3. 安装完成后从桌面快捷方式或开始菜单启动「歌词打轴」。
 4. 卸载：Windows 设置 → 应用 → 歌词打轴；或开始菜单中的「卸载 歌词打轴」。
 
-安装程序按用户安装，不需要管理员权限。安装包已经包含运行所需的
+安装程序默认安装到当前用户目录，不需要管理员权限。安装包已经包含运行所需的
 Qt/PySide6、Python 运行时和 FFmpeg，不会修改系统环境变量。
+
+如果手动选择 `C:\Program Files` 等受保护目录，Windows 会要求管理员权限。
+安装程序会提示你改用推荐目录，或选择以管理员身份重新启动。
 
 > 安装程序尚未做代码签名，Windows SmartScreen 可能提示“未知发布者”。
 > 确认文件来自本仓库 Releases 后，可选择“更多信息 → 仍要运行”。
@@ -331,3 +335,12 @@ Windows 设置 → 应用 → 歌词打轴；或开始菜单中的「卸载 歌�
 
 如果你重新分发本软件或其修改版本，请保留 `LICENSE`、`THIRD_PARTY_NOTICES.md`
 和 `licenses/` 目录，并遵守 FFmpeg、Qt/PySide6 等组件的许可证。
+
+## 开发说明
+
+本项目的代码、文档和安装程序在开发过程中使用了
+[DeepSeek Harness（DSH）](https://github.com/deepseek-ai/deepseek-harness)
+进行生成、整理和打包发布辅助。
+
+[![](https://img.shields.io/badge/powered_by-dsh-4D6BFE?style=flat-square&logo=deepseek&logoColor=white)](https://github.com/deepseek-ai/deepseek-harness)
+

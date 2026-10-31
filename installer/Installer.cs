@@ -7,6 +7,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Security.Principal;
 using System.Text;
 using System.Windows.Forms;
 using Microsoft.Win32;
@@ -21,15 +22,38 @@ namespace LyricsSubtitleSetup
         internal const string Publisher = "Ling-Clouds";
         internal const string RepoUrl = "https://github.com/Ling-Clouds/LyricsSubtitle";
         internal const string UninstallKey = @"Software\Microsoft\Windows\CurrentVersion\Uninstall\LyricsSubtitle";
+        private static string defaultDir;
 
         internal static string DefaultDir
         {
             get
             {
-                return Path.Combine(
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),
-                    @"Programs\LyricsSubtitle");
+                if (defaultDir == null)
+                {
+                    defaultDir = ChooseDefaultDir();
+                }
+                return defaultDir;
             }
+        }
+
+        private static string ChooseDefaultDir()
+        {
+            string local = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            string profile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+            string[] candidates = new string[]
+            {
+                Path.Combine(local, @"Programs\LyricsSubtitle"),
+                Path.Combine(local, "LyricsSubtitle"),
+                Path.Combine(profile, "LyricsSubtitle")
+            };
+            foreach (string candidate in candidates)
+            {
+                if (CanWriteTarget(candidate))
+                {
+                    return candidate;
+                }
+            }
+            return candidates[0];
         }
 
         [STAThread]
@@ -47,6 +71,10 @@ namespace LyricsSubtitleSetup
                 {
                     Install(dir, !HasArg(args, "--no-shortcuts"), !HasArg(args, "--no-registry"), null);
                     return 0;
+                }
+                catch (UnauthorizedAccessException)
+                {
+                    return 4;
                 }
                 catch
                 {
@@ -158,6 +186,76 @@ namespace LyricsSubtitleSetup
                 throw new ArgumentException("目标路径已经存在且不是文件夹");
             }
             return target;
+        }
+
+        internal static bool CanWriteTarget(string path)
+        {
+            string probe = null;
+            try
+            {
+                string target = NormalizeTarget(path);
+                Directory.CreateDirectory(target);
+                probe = Path.Combine(target, ".lyricsub-write-" + Guid.NewGuid().ToString("N") + ".tmp");
+                using (FileStream stream = File.Create(probe, 1))
+                {
+                    stream.WriteByte(0);
+                }
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
+            finally
+            {
+                if (probe != null)
+                {
+                    try
+                    {
+                        if (File.Exists(probe))
+                        {
+                            File.Delete(probe);
+                        }
+                    }
+                    catch
+                    {
+                    }
+                }
+            }
+        }
+
+        internal static bool IsElevated()
+        {
+            try
+            {
+                using (WindowsIdentity identity = WindowsIdentity.GetCurrent())
+                {
+                    WindowsPrincipal principal = new WindowsPrincipal(identity);
+                    return principal.IsInRole(WindowsBuiltInRole.Administrator);
+                }
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        internal static bool RelaunchElevated(string target)
+        {
+            try
+            {
+                ProcessStartInfo info = new ProcessStartInfo();
+                info.FileName = Application.ExecutablePath;
+                info.Arguments = "--dir \"" + target + "\"";
+                info.UseShellExecute = true;
+                info.Verb = "runas";
+                Process.Start(info);
+                return true;
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         private static bool IsInside(string root, string path)
@@ -491,6 +589,58 @@ namespace LyricsSubtitleSetup
             catch (Exception ex)
             {
                 MessageBox.Show(this, ex.Message, "安装路径", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            if (!Program.CanWriteTarget(target))
+            {
+                if (Program.IsElevated())
+                {
+                    MessageBox.Show(
+                        this,
+                        "当前已经是管理员权限，但仍然无法写入：\r\n" + target +
+                        "\r\n\r\n请换一个目录，或检查该目录的权限。",
+                        "无法写入安装目录",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Error);
+                    return;
+                }
+
+                DialogResult choice = MessageBox.Show(
+                    this,
+                    "当前用户没有写入以下目录的权限：\r\n" + target +
+                    "\r\n\r\n请选择：\r\n" +
+                    "【是】以管理员身份重新启动安装程序\r\n" +
+                    "【否】改用推荐目录（不需要管理员权限）\r\n" +
+                    "【取消】返回\r\n\r\n" +
+                    "推荐目录：\r\n" + Program.DefaultDir,
+                    "需要写入权限",
+                    MessageBoxButtons.YesNoCancel,
+                    MessageBoxIcon.Warning);
+                if (choice == DialogResult.Yes)
+                {
+                    if (Program.RelaunchElevated(target))
+                    {
+                        Close();
+                    }
+                    else
+                    {
+                        MessageBox.Show(
+                            this,
+                            "没有获得管理员权限，安装已取消。\r\n\r\n" +
+                            "你也可以选择推荐目录，它不需要管理员权限。",
+                            "未获得管理员权限",
+                            MessageBoxButtons.OK,
+                            MessageBoxIcon.Warning);
+                    }
+                    return;
+                }
+                if (choice == DialogResult.No)
+                {
+                    pathBox.Text = Program.DefaultDir;
+                    statusLabel.Text = "已切换为推荐目录，请再次点击“安装”";
+                    return;
+                }
                 return;
             }
 
