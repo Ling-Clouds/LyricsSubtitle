@@ -50,8 +50,8 @@ class DesktopLyricsWindow(QWidget):
         self._position_ms = 0
         self._enabled = False
         self._playing = False
-        self._font_family = "Microsoft YaHei UI"
-        self._font_size = 34
+        self._font_family = "Microsoft YaHei"
+        self._font_size = 24
         self._color = QColor("#ffffff")
         self._positioned = False
         self._drag_offset: Optional[QPoint] = None
@@ -126,7 +126,7 @@ class DesktopLyricsWindow(QWidget):
             self.hide()
 
     def apply_appearance(self, family: str, size: int, color: QColor) -> None:
-        self._font_family = family or "Microsoft YaHei UI"
+        self._font_family = family or "Microsoft YaHei"
         self._font_size = max(12, min(96, int(size)))
         if color.isValid():
             self._color = QColor(color)
@@ -430,7 +430,7 @@ class DesktopLyricsSettingsDialog(QDialog):
         )
 
     def values(self) -> tuple[bool, str, int, QColor]:
-        family = self.font_combo.currentFont().family() or "Microsoft YaHei UI"
+        family = self.font_combo.currentFont().family() or "Microsoft YaHei"
         return (
             self.enable_box.isChecked(),
             family,

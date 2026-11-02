@@ -407,7 +407,7 @@ namespace LyricsSubtitleSetup
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
             MinimizeBox = false;
-            Font = new Font("Microsoft YaHei UI", 9F);
+            Font = new Font("Microsoft YaHei", 9F);
             try
             {
                 Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
@@ -418,7 +418,7 @@ namespace LyricsSubtitleSetup
 
             Label title = new Label();
             title.Text = "安装 " + Program.AppName;
-            title.Font = new Font("Microsoft YaHei UI", 18F, FontStyle.Bold);
+            title.Font = new Font("Microsoft YaHei", 18F, FontStyle.Bold);
             title.AutoSize = true;
             title.Location = new Point(18, 16);
             Controls.Add(title);
@@ -454,7 +454,7 @@ namespace LyricsSubtitleSetup
             exampleLabel.AutoEllipsis = true;
             exampleLabel.Location = new Point(12, 54);
             exampleLabel.Size = new Size(760, 38);
-            exampleLabel.Font = new Font("Microsoft YaHei UI", 8.5F);
+            exampleLabel.Font = new Font("Microsoft YaHei", 8.5F);
             exampleLabel.ForeColor = Color.FromArgb(150, 160, 175);
             pathGroup.Controls.Add(exampleLabel);
             UpdateExample();
@@ -472,7 +472,7 @@ namespace LyricsSubtitleSetup
             licenseBox.WordWrap = true;
             licenseBox.Location = new Point(10, 22);
             licenseBox.Size = new Size(762, 256);
-            licenseBox.Font = new Font("Microsoft YaHei UI", 8.5F);
+            licenseBox.Font = new Font("Microsoft YaHei", 8.5F);
             licenseBox.Text = NormalizeText(Program.ReadResource("license.txt"))
                 + "\r\n\r\n"
                 + NormalizeText(Program.ReadResource("notices.txt"));

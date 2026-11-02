@@ -232,7 +232,7 @@ QDialogButtonBox QPushButton:default {
 
 def apply_theme(app: QApplication) -> None:
     app.setStyle("Fusion")
-    app.setFont(QFont("Microsoft YaHei UI", 9))
+    app.setFont(QFont("Microsoft YaHei", 9))
 
     palette = QPalette()
     palette.setColor(QPalette.Window, QColor(COLORS["bg"]))

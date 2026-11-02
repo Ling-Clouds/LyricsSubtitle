@@ -142,6 +142,20 @@ class MainWindowSmokeTest(unittest.TestCase):
         self.window.stop_playback()
         self.assertEqual(self.window.timeline.playhead_ms, 0)
 
+    def test_stop_after_seek_uses_latest_seek_position(self) -> None:
+        self.window._playing = True
+        self.window._playback_start_ms = 4000
+        self.window.seek(8000)
+        self.assertEqual(self.window._playback_start_ms, 8000)
+        self.window.timeline.set_playhead(12000)
+        self.window.stop_playback()
+        self.assertEqual(self.window.timeline.playhead_ms, 8000)
+
+    def test_desktop_lyrics_defaults(self) -> None:
+        overlay = self.window.desktop_lyrics
+        self.assertEqual(overlay.font_family, "Microsoft YaHei")
+        self.assertEqual(overlay.font_size, 24)
+
     def test_lyrics_dialog(self) -> None:
         from lyrics_subtitle.ui.panel import LyricsEditDialog
 
@@ -407,13 +421,13 @@ class MainWindowSmokeTest(unittest.TestCase):
         dialog = DesktopLyricsSettingsDialog(
             self.window,
             True,
-            "Microsoft YaHei UI",
+            "Microsoft YaHei",
             30,
             QColor("#abcdef"),
         )
         enabled, family, size, color = dialog.values()
         self.assertTrue(enabled)
-        self.assertEqual(family, "Microsoft YaHei UI")
+        self.assertEqual(family, "Microsoft YaHei")
         self.assertEqual(size, 30)
         self.assertEqual(color.name(), "#abcdef")
         dialog.close()

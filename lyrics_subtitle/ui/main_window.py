@@ -127,7 +127,7 @@ def _make_icon() -> QIcon:
     painter.setBrush(QColor("#2a6f66"))
     painter.drawRoundedRect(2, 2, 60, 60, 14, 14)
     painter.setPen(QColor("#ffffff"))
-    font = QFont("Microsoft YaHei UI", 26)
+    font = QFont("Microsoft YaHei", 26)
     font.setBold(True)
     painter.setFont(font)
     painter.drawText(pixmap.rect(), Qt.AlignCenter, "词")
@@ -163,8 +163,8 @@ class MainWindow(QMainWindow):
             "Ling-Clouds", "LyricsSubtitle"
         )
         self._desktop_enabled = False
-        self._desktop_font_family = "Microsoft YaHei UI"
-        self._desktop_font_size = 34
+        self._desktop_font_family = "Microsoft YaHei"
+        self._desktop_font_size = 24
         self._desktop_color = QColor("#ffffff")
 
         self.setMinimumSize(1000, 640)
@@ -271,7 +271,7 @@ class MainWindow(QMainWindow):
         # ---- 文件栏 ----------------------------------------------------
         file_bar, file_layout = self._bar()
         brand = QLabel("歌词打轴")
-        brand_font = QFont("Microsoft YaHei UI", 11)
+        brand_font = QFont("Microsoft YaHei", 11)
         brand_font.setBold(True)
         brand.setFont(brand_font)
         brand.setStyleSheet("color:#8fe8dc; padding:0 6px 0 2px;")
@@ -320,14 +320,14 @@ class MainWindow(QMainWindow):
 
         self.stop_btn = self._tb(
             "停止",
-            "停止播放并回到本次开始播放的位置；未播放时回到开头",
+            "停止播放并回到最近一次开始播放或手动定位的位置；未播放时回到开头",
             self.stop_playback,
         )
         transport_layout.addWidget(self.stop_btn)
 
         self.time_label = QLabel("0:00.000 / 0:00.000")
         self.time_label.setObjectName("TimeLabel")
-        self.time_label.setFont(QFont("Consolas", 11))
+        self.time_label.setFont(QFont("Microsoft YaHei", 11))
         self.time_label.setMinimumWidth(210)
         transport_layout.addWidget(self.time_label)
         transport_layout.addWidget(self._sep())
@@ -727,13 +727,23 @@ class MainWindow(QMainWindow):
     # ------------------------------------------------------------------
     def _load_desktop_lyrics_settings(self) -> None:
         settings = self._desktop_settings
+        try:
+            revision = int(settings.value("desktop_lyrics/settings_revision", 0))
+        except (TypeError, ValueError):
+            revision = 0
         family = str(
-            settings.value("desktop_lyrics/font_family", "Microsoft YaHei UI")
+            settings.value("desktop_lyrics/font_family", "Microsoft YaHei")
         )
         try:
-            size = int(settings.value("desktop_lyrics/font_size", 34))
+            size = int(settings.value("desktop_lyrics/font_size", 24))
         except (TypeError, ValueError):
-            size = 34
+            size = 24
+        # 兼容 0.2 开发期的旧默认值（34 pt / Microsoft YaHei UI）。
+        if revision < 2:
+            if size == 34:
+                size = 24
+            if family == "Microsoft YaHei UI":
+                family = "Microsoft YaHei"
         color = QColor(str(settings.value("desktop_lyrics/color", "#ffffff")))
         if not color.isValid():
             color = QColor("#ffffff")
@@ -743,9 +753,11 @@ class MainWindow(QMainWindow):
         else:
             enabled = str(enabled_value).lower() in {"1", "true", "yes", "on"}
 
-        self._desktop_font_family = family or "Microsoft YaHei UI"
+        self._desktop_font_family = family or "Microsoft YaHei"
         self._desktop_font_size = max(12, min(96, size))
         self._desktop_color = QColor(color)
+        settings.setValue("desktop_lyrics/settings_revision", 2)
+        settings.sync()
         self.desktop_lyrics.apply_appearance(
             self._desktop_font_family,
             self._desktop_font_size,
@@ -833,6 +845,7 @@ class MainWindow(QMainWindow):
         settings.setValue("desktop_lyrics/font_size", self._desktop_font_size)
         settings.setValue("desktop_lyrics/color", self._desktop_color.name())
         settings.setValue("desktop_lyrics/position", self.desktop_lyrics.pos())
+        settings.setValue("desktop_lyrics/settings_revision", 2)
         settings.sync()
 
     # ------------------------------------------------------------------
@@ -1148,13 +1161,15 @@ class MainWindow(QMainWindow):
         was_playing = self._playing
         target = self._playback_start_ms if was_playing else 0
         self.player.stop()
-        self.seek(target)
+        self.seek(target, update_start=False)
         if was_playing:
             self._toast("已停止播放，回到本次开始播放的位置")
         else:
             self._toast("播放头已回到开头")
 
-    def seek(self, ms: int) -> None:
+    def seek(self, ms: int, update_start: bool = True) -> None:
+        if update_start and self._playing:
+            self._playback_start_ms = max(0, int(ms))
         if self.project.audio_path and Path(self.project.audio_path).is_file():
             self.player.seek(ms)
         self.timeline.set_playhead(ms)
@@ -1595,7 +1610,7 @@ class MainWindow(QMainWindow):
     def show_shortcuts(self) -> None:
         text = (
             "空格          播放 / 暂停\n"
-            "停止按钮      停止播放并回到本次开始播放的位置；未播放时回到开头\n"
+            "停止按钮      停止播放并回到最近一次开始播放或手动定位的位置；未播放时回到开头\n"
             "Ctrl+Z        撤销\n"
             "Ctrl+Y        重做\n"
             "Ctrl+O        打开音频\n"

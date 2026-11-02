@@ -307,7 +307,7 @@ class TimelineView(QWidget):
 
         if self.waveform is None:
             painter.setPen(QColor(COLORS["text_faint"]))
-            painter.setFont(QFont("Microsoft YaHei UI", 9))
+            painter.setFont(QFont("Microsoft YaHei", 9))
             message = "正在分析波形…" if self.loading else "音频已载入，但波形不可用"
             painter.drawText(rect, Qt.AlignCenter, message)
             painter.setPen(QPen(QColor(COLORS["border"]), 1))
@@ -356,7 +356,7 @@ class TimelineView(QWidget):
         painter.drawLine(QPointF(cx, cy - 10), QPointF(cx, cy + 10))
 
         painter.setPen(QColor(COLORS["text_dim"]))
-        painter.setFont(QFont("Microsoft YaHei UI", 9))
+        painter.setFont(QFont("Microsoft YaHei", 9))
         text = (
             "松开鼠标导入音频"
             if self._drop_active
@@ -402,7 +402,7 @@ class TimelineView(QWidget):
                     painter.drawLine(QPointF(x, top), QPointF(x, bottom))
 
         if bar_px >= 42.0:
-            painter.setFont(QFont("Microsoft YaHei UI", 7))
+            painter.setFont(QFont("Microsoft YaHei", 7))
             painter.setPen(QColor("#5a6575"))
             for time_ms in grid.line_times(t0, t1, grid.bar_ms):
                 x = int(round(self._time_to_x(time_ms)))
@@ -429,14 +429,14 @@ class TimelineView(QWidget):
         painter.setPen(pen)
         for x, label in ((xa, "A"), (xb, "B")):
             painter.drawLine(QPointF(x, track.top()), QPointF(x, track.bottom()))
-            painter.setFont(QFont("Microsoft YaHei UI", 7))
+            painter.setFont(QFont("Microsoft YaHei", 7))
             painter.drawText(QPointF(x + 3, track.top() + 12), label)
         painter.restore()
 
     def _paint_blocks(self, painter: QPainter, track: QRectF) -> None:
         painter.save()
         painter.setClipRect(track)
-        font = QFont("Microsoft YaHei UI", 9)
+        font = QFont("Microsoft YaHei", 9)
         painter.setFont(font)
         metrics = QFontMetrics(font)
         y = track.top() + 15
@@ -444,7 +444,7 @@ class TimelineView(QWidget):
 
         if not any(line.start_ms is not None for line in self.project.lines):
             painter.setPen(QColor("#525b69"))
-            painter.setFont(QFont("Microsoft YaHei UI", 9))
+            painter.setFont(QFont("Microsoft YaHei", 9))
             if self.loading:
                 hint = "正在分析波形…"
             elif not self.project.audio_path or not Path(self.project.audio_path).is_file():
@@ -534,7 +534,7 @@ class TimelineView(QWidget):
         if self.project.duration_ms <= 0:
             painter.restore()
             return
-        font = QFont("Consolas", 8)
+        font = QFont("Microsoft YaHei", 8)
         painter.setFont(font)
         metrics = QFontMetrics(font)
         painter.setPen(QColor(COLORS["ruler_text"]))
@@ -621,7 +621,7 @@ class TimelineView(QWidget):
         painter.drawLine(QPointF(x, ruler.top()), QPointF(x, track.bottom()))
 
         label = format_ms(self._hover_time_ms)
-        font = QFont("Consolas", 8)
+        font = QFont("Microsoft YaHei", 8)
         painter.setFont(font)
         metrics = QFontMetrics(font)
         width = metrics.horizontalAdvance(label) + 10

@@ -78,7 +78,7 @@ class LyricsTable(QTableWidget):
         if self.rowCount() == 0:
             painter = QPainter(self.viewport())
             painter.setPen(QColor("#6f7987"))
-            painter.setFont(QFont("Microsoft YaHei UI", 10))
+            painter.setFont(QFont("Microsoft YaHei", 10))
             painter.drawText(
                 self.viewport().rect(), Qt.AlignCenter, "点击这里输入歌词"
             )
@@ -105,7 +105,7 @@ class LyricsPanel(QWidget):
 
         header = QHBoxLayout()
         title = QLabel("歌词")
-        title_font = QFont("Microsoft YaHei UI", 11)
+        title_font = QFont("Microsoft YaHei", 11)
         title_font.setBold(True)
         title.setFont(title_font)
         header.addWidget(title)
@@ -244,9 +244,9 @@ class LyricsPanel(QWidget):
         self.table.blockSignals(old)
 
     def _apply_styles(self) -> None:
-        time_font = QFont("Consolas", 9)
-        text_font = QFont("Microsoft YaHei UI", 9)
-        bold_font = QFont("Microsoft YaHei UI", 9)
+        time_font = QFont("Microsoft YaHei", 9)
+        text_font = QFont("Microsoft YaHei", 9)
+        bold_font = QFont("Microsoft YaHei", 9)
         bold_font.setBold(True)
         current_bg = QBrush(QColor("#1d3b37"))
 
