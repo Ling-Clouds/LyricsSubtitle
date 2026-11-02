@@ -52,6 +52,10 @@ class AudioPlayer(QObject):
     def duration(self) -> int:
         return self._duration
 
+    @property
+    def position(self) -> int:
+        return max(0, int(self._player.position()))
+
     # ------------------------------------------------------------------
     # 控制
     # ------------------------------------------------------------------

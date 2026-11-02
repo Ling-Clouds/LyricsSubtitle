@@ -393,6 +393,7 @@ namespace LyricsSubtitleSetup
         private readonly CheckBox launchBox;
         private readonly ProgressBar progress;
         private readonly Label statusLabel;
+        private readonly Label exampleLabel;
         private readonly Button installButton;
         private readonly Button browseButton;
         private readonly BackgroundWorker worker;
@@ -431,13 +432,14 @@ namespace LyricsSubtitleSetup
             GroupBox pathGroup = new GroupBox();
             pathGroup.Text = "安装位置";
             pathGroup.Location = new Point(18, 90);
-            pathGroup.Size = new Size(784, 62);
+            pathGroup.Size = new Size(784, 100);
             Controls.Add(pathGroup);
 
             pathBox = new TextBox();
             pathBox.Text = String.IsNullOrEmpty(initialPath) ? Program.DefaultDir : initialPath;
             pathBox.Location = new Point(12, 24);
             pathBox.Width = 650;
+            pathBox.TextChanged += delegate { UpdateExample(); };
             pathGroup.Controls.Add(pathBox);
 
             browseButton = new Button();
@@ -447,10 +449,20 @@ namespace LyricsSubtitleSetup
             browseButton.Click += BrowseClick;
             pathGroup.Controls.Add(browseButton);
 
+            exampleLabel = new Label();
+            exampleLabel.AutoSize = false;
+            exampleLabel.AutoEllipsis = true;
+            exampleLabel.Location = new Point(12, 54);
+            exampleLabel.Size = new Size(760, 38);
+            exampleLabel.Font = new Font("Microsoft YaHei UI", 8.5F);
+            exampleLabel.ForeColor = Color.FromArgb(150, 160, 175);
+            pathGroup.Controls.Add(exampleLabel);
+            UpdateExample();
+
             GroupBox licenseGroup = new GroupBox();
             licenseGroup.Text = "许可证与第三方组件";
-            licenseGroup.Location = new Point(18, 162);
-            licenseGroup.Size = new Size(784, 330);
+            licenseGroup.Location = new Point(18, 202);
+            licenseGroup.Size = new Size(784, 290);
             Controls.Add(licenseGroup);
 
             licenseBox = new TextBox();
@@ -459,9 +471,11 @@ namespace LyricsSubtitleSetup
             licenseBox.ScrollBars = ScrollBars.Vertical;
             licenseBox.WordWrap = true;
             licenseBox.Location = new Point(10, 22);
-            licenseBox.Size = new Size(762, 296);
+            licenseBox.Size = new Size(762, 256);
             licenseBox.Font = new Font("Microsoft YaHei UI", 8.5F);
-            licenseBox.Text = Program.ReadResource("license.txt") + "\r\n\r\n" + Program.ReadResource("notices.txt");
+            licenseBox.Text = NormalizeText(Program.ReadResource("license.txt"))
+                + "\r\n\r\n"
+                + NormalizeText(Program.ReadResource("notices.txt"));
             licenseBox.SelectionStart = 0;
             licenseGroup.Controls.Add(licenseBox);
 
@@ -530,12 +544,43 @@ namespace LyricsSubtitleSetup
         {
             using (FolderBrowserDialog dialog = new FolderBrowserDialog())
             {
-                dialog.SelectedPath = pathBox.Text;
+                string current = pathBox.Text.Trim();
+                string initial = Path.GetDirectoryName(current);
+                if (String.IsNullOrEmpty(initial) || !Directory.Exists(initial))
+                {
+                    initial = Program.DefaultDir;
+                }
+                dialog.SelectedPath = initial;
+                dialog.Description = "选择安装父目录；安装程序会自动创建 LyricsSubtitle 文件夹";
                 if (dialog.ShowDialog(this) == DialogResult.OK)
                 {
-                    pathBox.Text = dialog.SelectedPath;
+                    string selected = dialog.SelectedPath;
+                    string trimmed = selected.TrimEnd(
+                        Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                    string name = Path.GetFileName(trimmed);
+                    if (String.Equals(name, "LyricsSubtitle", StringComparison.OrdinalIgnoreCase))
+                    {
+                        pathBox.Text = trimmed;
+                    }
+                    else
+                    {
+                        pathBox.Text = Path.Combine(selected, "LyricsSubtitle");
+                    }
+                    UpdateExample();
                 }
             }
+        }
+
+        private void UpdateExample()
+        {
+            string target = pathBox.Text.Trim();
+            exampleLabel.Text =
+                "示例：" + target + "\r\n浏览选择父目录后，会自动追加 LyricsSubtitle 文件夹";
+        }
+
+        private static string NormalizeText(string text)
+        {
+            return text.Replace("\r\n", "\n").Replace('\r', '\n').Replace("\n", "\r\n");
         }
 
         private void InstallClick(object sender, EventArgs e)

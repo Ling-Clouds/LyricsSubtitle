@@ -128,6 +128,20 @@ class MainWindowSmokeTest(unittest.TestCase):
         self.assertEqual(self.window.player._loop_a, 1000)
         self.assertEqual(self.window.player._loop_b, 3000)
 
+    def test_stop_returns_to_play_start_or_zero(self) -> None:
+        self.assertEqual(self.window.stop_btn.text(), "停止")
+        self.window.seek(4000)
+        self.window._playing = True
+        self.window._playback_start_ms = 4000
+        self.window.timeline.set_playhead(8000)
+        self.window.stop_playback()
+        self.assertEqual(self.window.timeline.playhead_ms, 4000)
+
+        self.window._playing = False
+        self.window.seek(5000)
+        self.window.stop_playback()
+        self.assertEqual(self.window.timeline.playhead_ms, 0)
+
     def test_lyrics_dialog(self) -> None:
         from lyrics_subtitle.ui.panel import LyricsEditDialog
 

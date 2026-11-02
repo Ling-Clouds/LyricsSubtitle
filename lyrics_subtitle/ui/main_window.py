@@ -151,6 +151,7 @@ class MainWindow(QMainWindow):
         self._dirty = False
         self._updating_ui = False
         self._playing = False
+        self._playback_start_ms = 0
         self._audio_loading = False
         self._duration_from_decode = False
         self._audio_token = 0
@@ -316,6 +317,13 @@ class MainWindow(QMainWindow):
         self.play_btn.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
         self.play_btn.setMinimumWidth(92)
         transport_layout.addWidget(self.play_btn)
+
+        self.stop_btn = self._tb(
+            "停止",
+            "停止播放并回到本次开始播放的位置；未播放时回到开头",
+            self.stop_playback,
+        )
+        transport_layout.addWidget(self.stop_btn)
 
         self.time_label = QLabel("0:00.000 / 0:00.000")
         self.time_label.setObjectName("TimeLabel")
@@ -522,6 +530,9 @@ class MainWindow(QMainWindow):
         self.act_play = QAction("播放 / 暂停", self)
         self.act_play.triggered.connect(self.toggle_play)
 
+        self.act_stop = QAction("停止", self)
+        self.act_stop.triggered.connect(self.stop_playback)
+
         self.act_set_a = QAction("设置循环起点 A", self)
         self.act_set_a.triggered.connect(self.set_loop_a)
         self.act_set_b = QAction("设置循环终点 B", self)
@@ -575,6 +586,7 @@ class MainWindow(QMainWindow):
 
         play_menu = menu.addMenu("播放")
         play_menu.addAction(self.act_play)
+        play_menu.addAction(self.act_stop)
         play_menu.addSeparator()
         play_menu.addAction(self.act_set_a)
         play_menu.addAction(self.act_set_b)
@@ -1125,7 +1137,22 @@ class MainWindow(QMainWindow):
         if not self.project.audio_path or not Path(self.project.audio_path).is_file():
             self._toast("请先打开音频文件")
             return
+        if not self._playing:
+            start = max(0, int(self.timeline.playhead_ms))
+            if self.project.duration_ms > 0 and start >= self.project.duration_ms - 80:
+                start = 0
+            self._playback_start_ms = start
         self.player.toggle()
+
+    def stop_playback(self) -> None:
+        was_playing = self._playing
+        target = self._playback_start_ms if was_playing else 0
+        self.player.stop()
+        self.seek(target)
+        if was_playing:
+            self._toast("已停止播放，回到本次开始播放的位置")
+        else:
+            self._toast("播放头已回到开头")
 
     def seek(self, ms: int) -> None:
         if self.project.audio_path and Path(self.project.audio_path).is_file():
@@ -1568,6 +1595,7 @@ class MainWindow(QMainWindow):
     def show_shortcuts(self) -> None:
         text = (
             "空格          播放 / 暂停\n"
+            "停止按钮      停止播放并回到本次开始播放的位置；未播放时回到开头\n"
             "Ctrl+Z        撤销\n"
             "Ctrl+Y        重做\n"
             "Ctrl+O        打开音频\n"
