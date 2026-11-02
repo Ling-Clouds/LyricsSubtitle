@@ -9,6 +9,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QGuiApplication
 from PySide6.QtWidgets import QApplication
 
+from lyrics_subtitle import __version__
 from lyrics_subtitle.ui.main_window import MainWindow
 from lyrics_subtitle.ui.theme import apply_theme
 
@@ -57,6 +58,7 @@ def main() -> int:
     app = QApplication(sys.argv)
     app.setApplicationName("LyricsSubtitle")
     app.setApplicationDisplayName("歌词打轴")
+    app.setApplicationVersion(__version__)
     apply_theme(app)
     _log("after QApplication")
 

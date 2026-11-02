@@ -7,7 +7,6 @@ using System.IO;
 using System.IO.Compression;
 using System.Reflection;
 using System.Runtime.InteropServices;
-using System.Security.Principal;
 using System.Text;
 using System.Windows.Forms;
 using Microsoft.Win32;
@@ -17,7 +16,7 @@ namespace LyricsSubtitleSetup
     internal static class Program
     {
         internal const string AppName = "歌词打轴";
-        internal const string AppVersion = "0.1.0";
+        internal const string AppVersion = "0.2.0";
         internal const string AppId = "LyricsSubtitle";
         internal const string Publisher = "Ling-Clouds";
         internal const string RepoUrl = "https://github.com/Ling-Clouds/LyricsSubtitle";
@@ -224,40 +223,6 @@ namespace LyricsSubtitleSetup
             }
         }
 
-        internal static bool IsElevated()
-        {
-            try
-            {
-                using (WindowsIdentity identity = WindowsIdentity.GetCurrent())
-                {
-                    WindowsPrincipal principal = new WindowsPrincipal(identity);
-                    return principal.IsInRole(WindowsBuiltInRole.Administrator);
-                }
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
-        internal static bool RelaunchElevated(string target)
-        {
-            try
-            {
-                ProcessStartInfo info = new ProcessStartInfo();
-                info.FileName = Application.ExecutablePath;
-                info.Arguments = "--dir \"" + target + "\"";
-                info.UseShellExecute = true;
-                info.Verb = "runas";
-                Process.Start(info);
-                return true;
-            }
-            catch
-            {
-                return false;
-            }
-        }
-
         private static bool IsInside(string root, string path)
         {
             string prefix = root.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
@@ -458,7 +423,7 @@ namespace LyricsSubtitleSetup
             Controls.Add(title);
 
             Label subtitle = new Label();
-            subtitle.Text = "版本 " + Program.AppVersion + " · 按用户安装，不需要管理员权限";
+            subtitle.Text = "版本 " + Program.AppVersion + " · 安装需要管理员权限";
             subtitle.AutoSize = true;
             subtitle.Location = new Point(20, 58);
             Controls.Add(subtitle);
@@ -594,53 +559,13 @@ namespace LyricsSubtitleSetup
 
             if (!Program.CanWriteTarget(target))
             {
-                if (Program.IsElevated())
-                {
-                    MessageBox.Show(
-                        this,
-                        "当前已经是管理员权限，但仍然无法写入：\r\n" + target +
-                        "\r\n\r\n请换一个目录，或检查该目录的权限。",
-                        "无法写入安装目录",
-                        MessageBoxButtons.OK,
-                        MessageBoxIcon.Error);
-                    return;
-                }
-
-                DialogResult choice = MessageBox.Show(
+                MessageBox.Show(
                     this,
-                    "当前用户没有写入以下目录的权限：\r\n" + target +
-                    "\r\n\r\n请选择：\r\n" +
-                    "【是】以管理员身份重新启动安装程序\r\n" +
-                    "【否】改用推荐目录（不需要管理员权限）\r\n" +
-                    "【取消】返回\r\n\r\n" +
-                    "推荐目录：\r\n" + Program.DefaultDir,
-                    "需要写入权限",
-                    MessageBoxButtons.YesNoCancel,
-                    MessageBoxIcon.Warning);
-                if (choice == DialogResult.Yes)
-                {
-                    if (Program.RelaunchElevated(target))
-                    {
-                        Close();
-                    }
-                    else
-                    {
-                        MessageBox.Show(
-                            this,
-                            "没有获得管理员权限，安装已取消。\r\n\r\n" +
-                            "你也可以选择推荐目录，它不需要管理员权限。",
-                            "未获得管理员权限",
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Warning);
-                    }
-                    return;
-                }
-                if (choice == DialogResult.No)
-                {
-                    pathBox.Text = Program.DefaultDir;
-                    statusLabel.Text = "已切换为推荐目录，请再次点击“安装”";
-                    return;
-                }
+                    "当前安装程序已经请求了管理员权限，但仍然无法写入：\r\n" + target +
+                    "\r\n\r\n请换一个目录，或检查该目录的权限。",
+                    "无法写入安装目录",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Error);
                 return;
             }
 

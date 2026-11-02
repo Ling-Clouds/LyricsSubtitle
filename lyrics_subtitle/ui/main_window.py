@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional
 
-from PySide6.QtCore import QEvent, QPoint, QPointF, QSize, Qt, QThread, Signal
+from PySide6.QtCore import QEvent, QObject, QPoint, QPointF, QSettings, QSize, Qt, QThread, Signal
 from PySide6.QtGui import (
     QAction,
     QColor,
@@ -51,6 +51,7 @@ from ..core import (
 )
 from ..exporters import ExportError, build_lrc, build_srt, write_text_file
 from ..history import History
+from .desktop_lyrics import DesktopLyricsSettingsDialog, DesktopLyricsWindow
 from .panel import LyricsPanel
 from .player import AudioPlayer
 from .timeline import TimelineView
@@ -76,7 +77,7 @@ class WaveformWorker(QThread):
         self.done.emit(data)
 
 
-class SpaceFilter(QWidget):
+class SpaceFilter(QObject):
     """应用级空格键过滤器：编辑文字时让空格正常输入，其余时候播放/暂停。"""
 
     def __init__(self, window: "MainWindow") -> None:
@@ -135,7 +136,11 @@ def _make_icon() -> QIcon:
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, parent: Optional[QWidget] = None) -> None:
+    def __init__(
+        self,
+        parent: Optional[QWidget] = None,
+        settings: Optional[QSettings] = None,
+    ) -> None:
         super().__init__(parent)
         self.project = Project()
         self.history = History()
@@ -153,14 +158,24 @@ class MainWindow(QMainWindow):
         self._last_player_error = ""
         self._loop_a: Optional[int] = None
         self._loop_b: Optional[int] = None
+        self._desktop_settings = settings or QSettings(
+            "Ling-Clouds", "LyricsSubtitle"
+        )
+        self._desktop_enabled = False
+        self._desktop_font_family = "Microsoft YaHei UI"
+        self._desktop_font_size = 34
+        self._desktop_color = QColor("#ffffff")
 
         self.setMinimumSize(1000, 640)
         self._apply_default_size()
         self.setWindowIcon(_make_icon())
 
         self._build_ui()
+        self.desktop_lyrics = DesktopLyricsWindow(None)
+        self.desktop_lyrics.moved.connect(self._on_desktop_lyrics_moved)
         self._build_actions()
         self._connect()
+        self._load_desktop_lyrics_settings()
         self._refresh_all()
 
         self._space_filter = SpaceFilter(self)
@@ -181,6 +196,12 @@ class MainWindow(QMainWindow):
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)
         self._update_grid_visibility()
+
+    def showEvent(self, event) -> None:
+        super().showEvent(event)
+        if getattr(self, "_desktop_enabled", False) and hasattr(self, "desktop_lyrics"):
+            self.desktop_lyrics.show()
+            self.desktop_lyrics.raise_()
 
     # ------------------------------------------------------------------
     # 界面搭建
@@ -276,6 +297,10 @@ class MainWindow(QMainWindow):
         file_layout.addStretch(1)
         self.btn_help = self._tb("快捷键", "查看快捷键与使用说明 (F1)", self.show_shortcuts)
         file_layout.addWidget(self.btn_help)
+        self.desktop_btn = self._tb(
+            "桌面歌词", "显示 / 隐藏桌面歌词 (Ctrl+Shift+L)", None, checkable=True
+        )
+        file_layout.addWidget(self.desktop_btn)
         self.follow_btn = self._tb(
             "跟随播放头", "播放时自动滚动时间轴", None, checkable=True
         )
@@ -502,6 +527,17 @@ class MainWindow(QMainWindow):
         self.act_set_b = QAction("设置循环终点 B", self)
         self.act_set_b.triggered.connect(self.set_loop_b)
 
+        self.act_desktop_lyrics = QAction("显示桌面歌词", self)
+        self.act_desktop_lyrics.setCheckable(True)
+        self.act_desktop_lyrics.setShortcut(QKeySequence("Ctrl+Shift+L"))
+        self.act_desktop_lyrics.toggled.connect(self._on_desktop_lyrics_toggled)
+
+        self.act_desktop_settings = QAction("字体、字号与颜色…", self)
+        self.act_desktop_settings.triggered.connect(self._open_desktop_lyrics_settings)
+
+        self.act_desktop_reset = QAction("重置歌词位置", self)
+        self.act_desktop_reset.triggered.connect(self._reset_desktop_lyrics_position)
+
         self.act_shortcuts = QAction("快捷键与说明", self)
         self.act_shortcuts.setShortcut(QKeySequence("F1"))
         self.act_shortcuts.triggered.connect(self.show_shortcuts)
@@ -543,12 +579,19 @@ class MainWindow(QMainWindow):
         play_menu.addAction(self.act_set_a)
         play_menu.addAction(self.act_set_b)
 
+        desktop_menu = menu.addMenu("桌面歌词")
+        desktop_menu.addAction(self.act_desktop_lyrics)
+        desktop_menu.addAction(self.act_desktop_settings)
+        desktop_menu.addSeparator()
+        desktop_menu.addAction(self.act_desktop_reset)
+
         help_menu = menu.addMenu("帮助")
         help_menu.addAction(self.act_shortcuts)
         help_menu.addAction(self.act_about)
 
     def _connect(self) -> None:
         self.follow_btn.toggled.connect(self._set_follow)
+        self.desktop_btn.toggled.connect(self._on_desktop_lyrics_toggled)
         self.speed_combo.currentIndexChanged.connect(self._on_speed_changed)
         self.loop_btn.toggled.connect(self.toggle_loop)
 
@@ -597,6 +640,9 @@ class MainWindow(QMainWindow):
         self.timeline.set_selected(selected)
         self.panel.set_lines(self.project.lines, current, selected)
         self.timeline.refresh()
+        if hasattr(self, "desktop_lyrics"):
+            self.desktop_lyrics.set_project(self.project)
+            self.desktop_lyrics.set_position(self.timeline.playhead_ms, self._playing)
         self._update_count()
 
     def _update_count(self) -> None:
@@ -663,6 +709,119 @@ class MainWindow(QMainWindow):
         rate = self.speed_combo.currentData()
         if rate is not None:
             self.player.set_rate(float(rate))
+
+    # ------------------------------------------------------------------
+    # 桌面歌词
+    # ------------------------------------------------------------------
+    def _load_desktop_lyrics_settings(self) -> None:
+        settings = self._desktop_settings
+        family = str(
+            settings.value("desktop_lyrics/font_family", "Microsoft YaHei UI")
+        )
+        try:
+            size = int(settings.value("desktop_lyrics/font_size", 34))
+        except (TypeError, ValueError):
+            size = 34
+        color = QColor(str(settings.value("desktop_lyrics/color", "#ffffff")))
+        if not color.isValid():
+            color = QColor("#ffffff")
+        enabled_value = settings.value("desktop_lyrics/enabled", False)
+        if isinstance(enabled_value, bool):
+            enabled = enabled_value
+        else:
+            enabled = str(enabled_value).lower() in {"1", "true", "yes", "on"}
+
+        self._desktop_font_family = family or "Microsoft YaHei UI"
+        self._desktop_font_size = max(12, min(96, size))
+        self._desktop_color = QColor(color)
+        self.desktop_lyrics.apply_appearance(
+            self._desktop_font_family,
+            self._desktop_font_size,
+            self._desktop_color,
+        )
+        position = settings.value("desktop_lyrics/position")
+        if isinstance(position, QPoint):
+            self.desktop_lyrics.set_saved_position(position)
+
+        self._desktop_enabled = enabled
+        for widget in (self.act_desktop_lyrics, self.desktop_btn):
+            widget.blockSignals(True)
+            widget.setChecked(enabled)
+            widget.blockSignals(False)
+        self.desktop_lyrics.set_enabled(enabled)
+        self.desktop_lyrics.set_project(self.project)
+        self.desktop_lyrics.set_position(self.timeline.playhead_ms, self._playing)
+
+    def _on_desktop_lyrics_toggled(self, checked: bool) -> None:
+        self._set_desktop_lyrics_enabled(checked, notify=True)
+
+    def _set_desktop_lyrics_enabled(
+        self,
+        enabled: bool,
+        notify: bool = True,
+    ) -> None:
+        self._desktop_enabled = bool(enabled)
+        for widget in (self.act_desktop_lyrics, self.desktop_btn):
+            widget.blockSignals(True)
+            widget.setChecked(self._desktop_enabled)
+            widget.blockSignals(False)
+        self.desktop_lyrics.set_enabled(self._desktop_enabled)
+        self._desktop_settings.setValue(
+            "desktop_lyrics/enabled", self._desktop_enabled
+        )
+        self._desktop_settings.sync()
+        if notify:
+            if self._desktop_enabled:
+                self._toast("桌面歌词已启用；可直接拖动歌词调整位置")
+            else:
+                self._toast("桌面歌词已关闭")
+
+    def _open_desktop_lyrics_settings(self) -> None:
+        dialog = DesktopLyricsSettingsDialog(
+            self,
+            self._desktop_enabled,
+            self._desktop_font_family,
+            self._desktop_font_size,
+            self._desktop_color,
+        )
+        # 置顶歌词会盖住模态设置框，打开设置时先临时隐藏。
+        if self._desktop_enabled:
+            self.desktop_lyrics.hide()
+        accepted = bool(dialog.exec())
+        if not accepted:
+            if self._desktop_enabled:
+                self.desktop_lyrics.show()
+                self.desktop_lyrics.raise_()
+            return
+        enabled, family, size, color = dialog.values()
+        self._desktop_font_family = family
+        self._desktop_font_size = size
+        self._desktop_color = QColor(color)
+        self.desktop_lyrics.apply_appearance(family, size, color)
+        self._set_desktop_lyrics_enabled(enabled, notify=True)
+        self._save_desktop_lyrics_settings()
+        self._toast("桌面歌词设置已更新")
+
+    def _reset_desktop_lyrics_position(self) -> None:
+        self.desktop_lyrics.reset_position()
+        self._desktop_settings.setValue(
+            "desktop_lyrics/position", self.desktop_lyrics.pos()
+        )
+        self._desktop_settings.sync()
+        self._toast("桌面歌词位置已重置")
+
+    def _on_desktop_lyrics_moved(self, position: QPoint) -> None:
+        self._desktop_settings.setValue("desktop_lyrics/position", position)
+        self._desktop_settings.sync()
+
+    def _save_desktop_lyrics_settings(self) -> None:
+        settings = self._desktop_settings
+        settings.setValue("desktop_lyrics/enabled", self._desktop_enabled)
+        settings.setValue("desktop_lyrics/font_family", self._desktop_font_family)
+        settings.setValue("desktop_lyrics/font_size", self._desktop_font_size)
+        settings.setValue("desktop_lyrics/color", self._desktop_color.name())
+        settings.setValue("desktop_lyrics/position", self.desktop_lyrics.pos())
+        settings.sync()
 
     # ------------------------------------------------------------------
     # 工程与音频
@@ -973,6 +1132,8 @@ class MainWindow(QMainWindow):
             self.player.seek(ms)
         self.timeline.set_playhead(ms)
         self._update_time_label()
+        if hasattr(self, "desktop_lyrics"):
+            self.desktop_lyrics.set_position(ms, self._playing)
 
     def _on_player_position(self, ms: int) -> None:
         if not self._playing and self.project.grid.snap_enabled:
@@ -980,6 +1141,8 @@ class MainWindow(QMainWindow):
         ensure = self._playing and self.follow_btn.isChecked()
         self.timeline.set_playhead(ms, ensure_visible=ensure)
         self._update_time_label()
+        if hasattr(self, "desktop_lyrics"):
+            self.desktop_lyrics.set_position(ms, self._playing)
 
     def _on_playing_changed(self, playing: bool) -> None:
         self._playing = bool(playing)
@@ -989,6 +1152,10 @@ class MainWindow(QMainWindow):
             snapped = self.project.grid.snap(self.timeline.playhead_ms)
             self.timeline.set_playhead(snapped)
             self._update_time_label()
+            if hasattr(self, "desktop_lyrics"):
+                self.desktop_lyrics.set_position(snapped, False)
+        if hasattr(self, "desktop_lyrics"):
+            self.desktop_lyrics.set_playing(self._playing)
 
     def _on_player_error(self, message: str) -> None:
         if message == self._last_player_error:
@@ -1122,6 +1289,8 @@ class MainWindow(QMainWindow):
         self.history.push(self.project.snapshot())
         self.project.lines[index].text = text
         self.timeline.update()
+        if hasattr(self, "desktop_lyrics"):
+            self.desktop_lyrics.set_project(self.project)
         self._mark_dirty()
         self._toast(f"已修改第 {index + 1} 句歌词")
 
@@ -1404,6 +1573,8 @@ class MainWindow(QMainWindow):
             "Ctrl+O        打开音频\n"
             "Ctrl+S        保存工程\n"
             "Ctrl+E        编辑歌词\n"
+            "Ctrl+Shift+L  显示 / 隐藏桌面歌词\n"
+            "拖动桌面歌词  调整歌词窗口位置\n"
             "点击空白歌词  打开歌词编辑框\n"
             "点击音频加号  导入音频（也可直接拖入音频轨）\n"
             "滚轮          以鼠标位置为中心缩放时间轴\n"
@@ -1462,6 +1633,9 @@ class MainWindow(QMainWindow):
         app = QApplication.instance()
         if app is not None and hasattr(self, "_space_filter"):
             app.removeEventFilter(self._space_filter)
+        if hasattr(self, "desktop_lyrics"):
+            self._save_desktop_lyrics_settings()
+            self.desktop_lyrics.close()
         self.player.stop()
         worker = self._worker
         if worker is not None and worker.isRunning():

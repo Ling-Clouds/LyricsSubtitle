@@ -1,17 +1,24 @@
 from __future__ import annotations
 
 import os
+import tempfile
 import unittest
 from pathlib import Path
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 os.environ.setdefault("QT_QPA_FONTDIR", r"C:\Windows\Fonts")
 
-from PySide6.QtCore import QPoint, Qt
+from PySide6.QtCore import QEvent, QPoint, QPointF, QSettings, Qt
+from PySide6.QtGui import QColor, QMouseEvent
 from PySide6.QtTest import QTest
 from PySide6.QtWidgets import QApplication
 
-from lyrics_subtitle.ui.main_window import MainWindow
+from lyrics_subtitle.core import LyricLine
+from lyrics_subtitle.ui.desktop_lyrics import (
+    DesktopLyricsSettingsDialog,
+    DesktopLyricsWindow,
+)
+from lyrics_subtitle.ui.main_window import MainWindow, SpaceFilter
 from lyrics_subtitle.ui.theme import apply_theme
 
 
@@ -22,7 +29,10 @@ class MainWindowSmokeTest(unittest.TestCase):
         apply_theme(cls.app)
 
     def setUp(self) -> None:
-        self.window = MainWindow()
+        self._tempdir = tempfile.TemporaryDirectory()
+        settings_path = Path(self._tempdir.name) / "settings.ini"
+        self.settings = QSettings(str(settings_path), QSettings.IniFormat)
+        self.window = MainWindow(settings=self.settings)
         self.window.resize(1400, 900)
         self.window.show()
         QTest.qWait(60)
@@ -37,6 +47,7 @@ class MainWindowSmokeTest(unittest.TestCase):
         self.window._dirty = False
         self.window.close()
         QTest.qWait(20)
+        self._tempdir.cleanup()
 
     def _click_time(self, ms: int, modifiers=Qt.NoModifier) -> None:
         timeline = self.window.timeline
@@ -270,6 +281,139 @@ class MainWindowSmokeTest(unittest.TestCase):
         view.dropEvent(event)
         self.assertEqual([Path(p) for p in hits], [Path(path)])
         view.deleteLater()
+
+    def test_menu_bar_not_blocked_by_space_filter(self) -> None:
+        self.assertFalse(self.window._space_filter.isWidgetType())
+        menu = self.window.menuBar()
+        for action in menu.actions()[:2]:
+            center = menu.actionGeometry(action).center()
+            child = self.window.childAt(menu.mapTo(self.window, center))
+            self.assertIsNot(child, self.window._space_filter)
+            QTest.mouseClick(menu, Qt.LeftButton, Qt.NoModifier, center)
+            QTest.qWait(20)
+            self.assertTrue(action.menu().isVisible())
+            QTest.keyClick(action.menu(), Qt.Key_Escape)
+            QTest.qWait(20)
+
+    def test_desktop_lyrics_follows_playhead_and_appearance(self) -> None:
+        self.window.project.lines = [
+            LyricLine("第一句", 4000),
+            LyricLine("第二句", 8000),
+            LyricLine("第三句", 12000),
+        ]
+        self.window.project.duration_ms = 16000
+        self.window._sync_views(None)
+        overlay = self.window.desktop_lyrics
+        overlay.set_enabled(True)
+
+        overlay.set_position(0)
+        self.assertEqual(overlay.current_text, "")
+        self.assertEqual(overlay.next_text, "第一句")
+
+        overlay.set_position(4000)
+        self.assertEqual(overlay.current_text, "第一句")
+        self.assertEqual(overlay.next_text, "第二句")
+
+        overlay.set_position(8500)
+        self.assertEqual(overlay.current_text, "第二句")
+        self.assertEqual(overlay.next_text, "第三句")
+
+        overlay.set_position(13000)
+        self.assertEqual(overlay.current_text, "第三句")
+        self.assertEqual(overlay.next_text, "")
+
+        overlay.apply_appearance("Consolas", 22, QColor("#ff8800"))
+        self.assertEqual(overlay.font_family, "Consolas")
+        self.assertEqual(overlay.font_size, 22)
+        self.assertEqual(overlay.text_color.name(), "#ff8800")
+        self.assertGreater(overlay.width(), 0)
+        overlay.set_enabled(False)
+
+    def test_desktop_lyrics_drag_moves_window(self) -> None:
+        overlay = self.window.desktop_lyrics
+        overlay.set_enabled(True)
+        overlay.set_saved_position(QPoint(120, 140))
+        start = overlay.pos()
+        local = QPointF(20, 20)
+        global_start = QPointF(overlay.mapToGlobal(QPoint(20, 20)))
+        self.app.sendEvent(
+            overlay,
+            QMouseEvent(
+                QEvent.MouseButtonPress,
+                local,
+                global_start,
+                Qt.LeftButton,
+                Qt.LeftButton,
+                Qt.NoModifier,
+            ),
+        )
+        global_end = QPointF(global_start.x() + 50, global_start.y() + 40)
+        self.app.sendEvent(
+            overlay,
+            QMouseEvent(
+                QEvent.MouseMove,
+                QPointF(70, 60),
+                global_end,
+                Qt.NoButton,
+                Qt.LeftButton,
+                Qt.NoModifier,
+            ),
+        )
+        self.app.sendEvent(
+            overlay,
+            QMouseEvent(
+                QEvent.MouseButtonRelease,
+                QPointF(70, 60),
+                global_end,
+                Qt.LeftButton,
+                Qt.NoButton,
+                Qt.NoModifier,
+            ),
+        )
+        self.assertEqual(overlay.pos(), start + QPoint(50, 40))
+        overlay.set_enabled(False)
+
+    def test_desktop_lyrics_toggle_keeps_widgets_and_settings_in_sync(self) -> None:
+        self.window._set_desktop_lyrics_enabled(True, notify=False)
+        self.assertTrue(self.window.desktop_lyrics.enabled)
+        self.assertTrue(self.window.act_desktop_lyrics.isChecked())
+        self.assertTrue(self.window.desktop_btn.isChecked())
+        self.assertEqual(self.settings.value("desktop_lyrics/enabled"), True)
+
+        self.window._set_desktop_lyrics_enabled(False, notify=False)
+        self.assertFalse(self.window.desktop_lyrics.enabled)
+        self.assertFalse(self.window.act_desktop_lyrics.isChecked())
+        self.assertFalse(self.window.desktop_btn.isChecked())
+
+    def test_desktop_lyrics_position_and_settings_dialog(self) -> None:
+        overlay = self.window.desktop_lyrics
+        overlay.set_saved_position(QPoint(120, 140))
+        self.assertEqual(overlay.pos(), QPoint(120, 140))
+
+        dialog = DesktopLyricsSettingsDialog(
+            self.window,
+            True,
+            "Microsoft YaHei UI",
+            30,
+            QColor("#abcdef"),
+        )
+        enabled, family, size, color = dialog.values()
+        self.assertTrue(enabled)
+        self.assertEqual(family, "Microsoft YaHei UI")
+        self.assertEqual(size, 30)
+        self.assertEqual(color.name(), "#abcdef")
+        dialog.close()
+
+    def test_desktop_lyrics_placeholder_and_empty_project(self) -> None:
+        overlay = self.window.desktop_lyrics
+        self.window.project.lines = []
+        self.window._sync_views(None)
+        overlay.set_position(0)
+        self.assertEqual(overlay.current_text, "")
+        self.assertEqual(overlay.next_text, "")
+        overlay.set_enabled(True)
+        self.assertTrue(overlay.isVisible())
+        overlay.set_enabled(False)
 
 
 if __name__ == "__main__":
